@@ -47,6 +47,10 @@ git config --global user.email "your.email@example.com"
 
 ---
 
+###SSH Key로 접속을 위한 설정 (Local key 생성은 gpt의 도움을 받도록)
+git remote set-url origin git@github.com:redbaron1740/xxxxxxxxxxxxx_ws.git
+
+
 ## 코드 올리기 (Push)
 
 ### 방법 1: 새 프로젝트 시작

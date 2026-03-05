@@ -139,14 +139,15 @@ cd servounit_/build
 
 [`CMakeLists.txt`](CMakeLists.txt)에 정의된 빌드 구성:
 
-| 항목              |                    값                     |
-|------------------|-------------------------------------------|
-| **프로젝트명**     | `Servounit_Test_Program`                  |
-| **C++ 표준**      | C++17                                     |
-| **컴파일러 플래그** | `-Wall -Wextra`                           |
-| **실행 파일명**    | `servounit_test_program`                  |
-| **Include 경로**  | `inc/`, `/usr/include`                    |
-| **링크 라이브러리** | `libpcanbasic.so`, `ncurses`, `pthread`   |
+
+|         Field        |                   Value                   |
+|----------------------|-------------------------------------------|
+|    *Project name*    |'Servounit Test Program'                   |
+|     Standard C++     | C++17 (g++17)                             |
+|    Compile flags     |'-Wall -Wextra'                            |
+|    Execution file    |'servounit_test_program'                   |
+|     Include path     |'inc/', '/usr/include'                     | 
+|     Link Library     |'libpcanbasic.so', 'ncurses', 'pthread'    |
 
 ---
 
@@ -184,7 +185,7 @@ EPS에서 수신하는 CAN 메시지 목록입니다.
 |--------------|-----------|------------------------------------------------------------|---------|
 | `0x18FF0513` | **EPSO1** | EPS Output 1 — 시스템 상태, 조향각, 조향각 속도                | 8 bytes |
 | `0x18FF0613` | **EPSO2** | EPS Output 2 — 드라이버 토크, 모터 토크, 제어 모드, 진동 상태    | 8 bytes |
-| `0x18F00B13` | **ESC1**  | Electronic Stability Control 1 — 실제 내부 휠 각도            | 8 bytes |
+| `0x18F00B13` | **ESC1**  | Electronic Stability Control 1 — 실제 내부 휠 각도           | 8 bytes |
 
 ### CAN 메시지 파싱 상세
 

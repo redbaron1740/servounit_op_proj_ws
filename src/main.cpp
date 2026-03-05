@@ -62,7 +62,7 @@ std::vector<std::string> menu_items = {
 	"4. Set Motor torque value for steering control", 
 	"5. Steer Vibration mode on", 
 	"6. Set another Value (vehicle values, etc.)", 
-	"7. About Program",
+	"7. About Program:::::::::::",
 	"Quit"
 };
 std::vector<std::string> streer_ctrl_mode_items = {
@@ -173,9 +173,14 @@ int main(void)//int argc, char* argv[])
 				usleep(2000000);
 
 				break;
-				case CASE_CAST(MENU_TYPE::Input_anotherMenu):  update_another_data(cmd_info);
-					break;
-			
+			case CASE_CAST(MENU_TYPE::Input_anotherMenu):  
+				clear();
+				mvprintw(4,2,"Enter Input another data");
+				//update_another_data(cmd_info); 
+				refresh();
+				usleep(200000);
+				break;
+
 			case CASE_CAST(MENU_TYPE::Vibrated_on): setMenu_ctrl_vibration(cmd_info);	break; 			// 조향 진동 모드 설정
 			case CASE_CAST(MENU_TYPE::FeedbackFreeTqCtrl): setMenu_ctrl_free_torque(cmd_info);break; 	// Feedback-free torque control 설정
 			case CASE_CAST(MENU_TYPE::MotorTqCtrl): setMenu_ctrl_motor_torque(cmd_info); break; 		// Motor torque control 설정
@@ -248,9 +253,39 @@ void update_another_data(CAN_CMD_INFO& cmd_info)
 {
 	// 다른 데이터 업데이트 로직 구현
 	// 예: CAN 메시지 수신 및 데이터 처리
+	int line = 0;
+	bool bRun = true;
+	int ch;
+
 	clear();
-	
+	mvprintw(line++, 3, "####################### Vehicle Data Information #####################");
+	mvprintw(line++, 3, "1.In-vehicle speed: %.2f kph",cmd_info.m_fCmd_in_vehicle_speed);
+	mvprintw(line++, 3, "2.Front axle wheel relative speed(gap): %.2f kph",cmd_info.m_fCmd_relatve_veh_axle_speed);
+	mvprintw(line++, 3, "3.In-vehicle yawrate: %f rad/sec^2",cmd_info.m_fCmd_yawrate);
+	mvprintw(line++, 3, "4.In-vehicle acceleration of x axis: %.2f m/s^2",cmd_info.m_fCmd_accelX);
+	mvprintw(line++, 3, "5.In-vehicle acceleration of y axis: %.2f m/s^2",cmd_info.m_fCmd_accelY);
+	mvprintw(line++, 3, "6.Required return weight of steering active : %d %",cmd_info.m_nCmd_str_active_ret_weight_req);
+	mvprintw(line++, 3, "7.Required limitation of steering torque: %d %",cmd_info.m_nCmd_str_angle_ctrl_tq_limit_req);
+	mvprintw(line++, 3, "8.Required angle weight of steering angle: %d %",cmd_info.m_nCmd_str_angle_ctrl_weight_req);
+	mvprintw(line++, 3, "#######################################################################");
+	line++;
+	mvprintw(line++, 3, "Could you update vehicle info? Choose number(1~8)");
 	refresh();
+
+
+	while (bRun)
+	{
+		/* code */
+		ch = getch();
+		if( ch == 'q' || ch == 'Q')
+		{
+			bRun = false;
+		}
+		// else if(ch == '1')
+		// {
+		// 	mvprint
+		// }
+	}
 	usleep(200000);
 }
 
