@@ -6,14 +6,14 @@
 #include <vector>
 #include <unistd.h>
 
-class Servounit_Operating_Prog {
+class Menu_select_instance {
 private:
     std::vector<std::string> menuItems;
     size_t currentSelection;
     std::string title ;
 
 public:
-    Servounit_Operating_Prog(const std::string& menuTitle, const std::vector<std::string>& items) 
+    Menu_select_instance(const std::string& menuTitle, const std::vector<std::string>& items) 
         : menuItems(items), currentSelection(0)  {
 
             title = menuTitle;

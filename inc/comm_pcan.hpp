@@ -73,9 +73,8 @@ typedef struct _tag_tx_upper_info
 	uint8_t     m_nCmd_str_vibrate_enable; 			// 0: disable, 1: enable
 	uint8_t		m_nCmd_str_active_ret_weight_req;	// 0 ~ 100%  
 	uint8_t		m_nCmd_str_angle_ctrl_weight_req;	// 0 ~ 100%  
-	uint8_t		m_nCmd_str_angle_ctrl_tq_limit_req;	// 0 ~ 10Nm  
 	uint8_t     m_nCmd_str_vibrate_level;  			// 0 ~ 9: max vibration level
-	uint8_t		m_reserved[2];						//reserved
+	uint8_t		m_reserved[3];						//reserved
 	double	   	m_FCmd_str_angle;       			//  -1,200 ~ 1,200 deg
 	double		m_fCmd_str_mt_tq;					// -32.374 ~ 32.374 Nm
 	double		m_fCmd_str_fbf_tq;					// -32.374 ~ 32.374 Nm
@@ -85,6 +84,7 @@ typedef struct _tag_tx_upper_info
 	double 		m_fCmd_yawrate;
 	double		m_fCmd_accelX;
 	double		m_fCmd_accelY;
+	double		m_fCmd_str_angle_ctrl_tq_limit_req;	// 0 ~ 10.0Nm  
 }CAN_CMD_INFO;
 
 class PCANManager
@@ -327,7 +327,7 @@ private: //methods
 
 			m_tx_msg_18FF01FEh.DATA[0] = dummy.m_nCmd_str_active_ret_weight_req;
 			m_tx_msg_18FF01FEh.DATA[1] = dummy.m_nCmd_str_angle_ctrl_weight_req;
-			m_tx_msg_18FF01FEh.DATA[2] = dummy.m_nCmd_str_angle_ctrl_tq_limit_req;
+			m_tx_msg_18FF01FEh.DATA[2] = static_cast<uint8_t>(dummy.m_fCmd_str_angle_ctrl_tq_limit_req * 20);
 			m_tx_msg_18FF01FEh.DATA[6] = (nCnt << 4);
 			m_tx_msg_18FF01FEh.DATA[7] = calc_crc_8bit_wcdma(m_tx_msg_18FF01FEh.ID, m_tx_msg_18FF01FEh.DATA, m_tx_msg_18FF01FEh.LEN);
 			can_tx_message_handler(m_tx_msg_18FF01FEh);

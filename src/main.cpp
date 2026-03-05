@@ -62,7 +62,7 @@ std::vector<std::string> menu_items = {
 	"4. Set Motor torque value for steering control", 
 	"5. Steer Vibration mode on", 
 	"6. Set another Value (vehicle values, etc.)", 
-	"7. About Program:::::::::::",
+	"7. About Program",
 	"Quit"
 };
 std::vector<std::string> streer_ctrl_mode_items = {
@@ -116,7 +116,7 @@ int main(void)//int argc, char* argv[])
 	cmd_info.m_nCmd_str_vibrate_enable = VALUE_CAST(VIBRATE_MODE::vibrate_disable);  
 	cmd_info.m_nCmd_str_active_ret_weight_req = 50;   	//%
 	cmd_info.m_nCmd_str_angle_ctrl_weight_req = 50;   	//%
-	cmd_info.m_nCmd_str_angle_ctrl_tq_limit_req = 7; 	//Nm
+	cmd_info.m_fCmd_str_angle_ctrl_tq_limit_req = 7.5; 	//Nm (0 ~ 10.0)
 	cmd_info.m_FCmd_str_angle = 0.0f;					//deg
 	cmd_info.m_fCmd_str_mt_tq = 0.0f;					//Nm
 	cmd_info.m_fCmd_str_fbf_tq = 0.0f;					//Nm
@@ -126,7 +126,7 @@ int main(void)//int argc, char* argv[])
 	
 	while (bRun)
 	{
-		Servounit_Operating_Prog main_menu(str_title, menu_items);
+		Menu_select_instance main_menu(str_title, menu_items);
 		int selection = main_menu.run();
 
 		usleep(10000);
@@ -174,11 +174,8 @@ int main(void)//int argc, char* argv[])
 
 				break;
 			case CASE_CAST(MENU_TYPE::Input_anotherMenu):  
-				clear();
-				mvprintw(4,2,"Enter Input another data");
-				//update_another_data(cmd_info); 
-				refresh();
-				usleep(200000);
+				update_another_data(cmd_info); 
+				pcan_manager.setCmdData_eps(cmd_info);
 				break;
 
 			case CASE_CAST(MENU_TYPE::Vibrated_on): setMenu_ctrl_vibration(cmd_info);	break; 			// 조향 진동 모드 설정
@@ -249,44 +246,239 @@ void updateEPSData(CAN_RX_INFO& data_info, double fAngle,uint8_t temp, bool bIsC
 	refresh();
 }
 
+enum class SUBMENU_TYPE : uint8_t {Inveh_speed = 0, Axle_rel_speed = 1, Yawrate, Acc_x, Acc_y, ret_weight,  angle_weight, limit_tq, Update};
+
+int submenu_display(const CAN_CMD_INFO& cmd_info)
+{
+
+	std::vector<std::string> submenu_items;
+	// Create 7 consecutive menu items with formatted vehicle data
+	char buffer[256];
+	
+	snprintf(buffer, sizeof(buffer), "1.In-vehicle speed: %.2f kph", cmd_info.m_fCmd_in_vehicle_speed);
+	submenu_items.push_back(buffer);
+	
+	snprintf(buffer, sizeof(buffer), "2.Front axle wheel relative speed(gap): %.2f kph", cmd_info.m_fCmd_relatve_veh_axle_speed);
+	submenu_items.push_back(buffer);
+	
+	snprintf(buffer, sizeof(buffer), "3.In-vehicle yawrate: %f rad/sec^2", cmd_info.m_fCmd_yawrate);
+	submenu_items.push_back(buffer);
+	
+	snprintf(buffer, sizeof(buffer), "4.In-vehicle acceleration of x axis: %.2f m/s^2", cmd_info.m_fCmd_accelX);
+	submenu_items.push_back(buffer);
+	
+	snprintf(buffer, sizeof(buffer), "5.In-vehicle acceleration of y axis: %.2f m/s^2", cmd_info.m_fCmd_accelY);
+	submenu_items.push_back(buffer);
+	
+	snprintf(buffer, sizeof(buffer), "6.Required return weight of steering active : %d %%", cmd_info.m_nCmd_str_active_ret_weight_req);
+	submenu_items.push_back(buffer);
+
+	snprintf(buffer, sizeof(buffer), "7.Required angle weight of steering angle: %d %%", cmd_info.m_nCmd_str_angle_ctrl_weight_req);
+	submenu_items.push_back(buffer);
+
+	snprintf(buffer, sizeof(buffer), "8.Required limitation of steering torque: %.2f Nm", cmd_info.m_fCmd_str_angle_ctrl_tq_limit_req);
+	submenu_items.push_back(buffer);
+
+	submenu_items.push_back("Update info");
+
+
+	Menu_select_instance sub_menu("Vehicle Data Information",submenu_items);
+	return sub_menu.run();
+
+}
+
 void update_another_data(CAN_CMD_INFO& cmd_info)
 {
 	// 다른 데이터 업데이트 로직 구현
 	// 예: CAN 메시지 수신 및 데이터 처리
-	int line = 0;
 	bool bRun = true;
-	int ch;
-
-	clear();
-	mvprintw(line++, 3, "####################### Vehicle Data Information #####################");
-	mvprintw(line++, 3, "1.In-vehicle speed: %.2f kph",cmd_info.m_fCmd_in_vehicle_speed);
-	mvprintw(line++, 3, "2.Front axle wheel relative speed(gap): %.2f kph",cmd_info.m_fCmd_relatve_veh_axle_speed);
-	mvprintw(line++, 3, "3.In-vehicle yawrate: %f rad/sec^2",cmd_info.m_fCmd_yawrate);
-	mvprintw(line++, 3, "4.In-vehicle acceleration of x axis: %.2f m/s^2",cmd_info.m_fCmd_accelX);
-	mvprintw(line++, 3, "5.In-vehicle acceleration of y axis: %.2f m/s^2",cmd_info.m_fCmd_accelY);
-	mvprintw(line++, 3, "6.Required return weight of steering active : %d %",cmd_info.m_nCmd_str_active_ret_weight_req);
-	mvprintw(line++, 3, "7.Required limitation of steering torque: %d %",cmd_info.m_nCmd_str_angle_ctrl_tq_limit_req);
-	mvprintw(line++, 3, "8.Required angle weight of steering angle: %d %",cmd_info.m_nCmd_str_angle_ctrl_weight_req);
-	mvprintw(line++, 3, "#######################################################################");
-	line++;
-	mvprintw(line++, 3, "Could you update vehicle info? Choose number(1~8)");
-	refresh();
-
+	std::string strInput;
 
 	while (bRun)
 	{
+
+		int selection = submenu_display(cmd_info);
+		usleep(10000);
+
 		/* code */
-		ch = getch();
-		if( ch == 'q' || ch == 'Q')
+
+		switch(selection)
 		{
-			bRun = false;
+			case -1:
+			case CASE_CAST(SUBMENU_TYPE::Update):
+				bRun = false;
+				break;
+
+			case CASE_CAST(SUBMENU_TYPE::Inveh_speed):
+			case CASE_CAST(SUBMENU_TYPE::Axle_rel_speed):
+			case CASE_CAST(SUBMENU_TYPE::Yawrate):
+			case CASE_CAST(SUBMENU_TYPE::Acc_x):
+			case CASE_CAST(SUBMENU_TYPE::Acc_y):
+			case CASE_CAST(SUBMENU_TYPE::ret_weight):
+			case CASE_CAST(SUBMENU_TYPE::angle_weight):
+			case CASE_CAST(SUBMENU_TYPE::limit_tq):
+				while(1)
+				{
+					clear();
+
+					if( selection == CASE_CAST(SUBMENU_TYPE::Inveh_speed))			mvprintw(3,2,"Set In-vehicle speed: %s kph",strInput.c_str());
+					else if( selection == CASE_CAST(SUBMENU_TYPE::Axle_rel_speed))	mvprintw(3,2,"Set Axle relative of speed: %s kph",strInput.c_str());
+					else if( selection == CASE_CAST(SUBMENU_TYPE::Yawrate))			mvprintw(3,2,"Set yawrate: %s rad/s^2",strInput.c_str());
+					else if( selection == CASE_CAST(SUBMENU_TYPE::Acc_x))			mvprintw(3,2,"Set x-axis of accel: %s m/s^2",strInput.c_str());
+					else if( selection == CASE_CAST(SUBMENU_TYPE::Acc_y))			mvprintw(3,2,"Set y-axis of accel: %s m/s^2",strInput.c_str());
+					else if( selection == CASE_CAST(SUBMENU_TYPE::ret_weight))	    mvprintw(3,2,"Set return weight val of steer: %s %%",strInput.c_str());
+					else if( selection == CASE_CAST(SUBMENU_TYPE::angle_weight))	mvprintw(3,2,"Set angle wieght val of steer: %s %%",strInput.c_str());
+					else if( selection == CASE_CAST(SUBMENU_TYPE::limit_tq)) 		mvprintw(3,2,"Set limit torq val of steering: %s Nm",strInput.c_str());
+					
+					
+					int ch = getch();
+					if( '0' <= ch && ch <= '9') strInput.push_back(ch);
+					else if ('-' == ch)
+					{
+						if( selection == CASE_CAST(SUBMENU_TYPE::Axle_rel_speed) ||
+								selection == CASE_CAST(SUBMENU_TYPE::Yawrate) || 
+								selection == CASE_CAST(SUBMENU_TYPE::Acc_x) || 
+								selection == CASE_CAST(SUBMENU_TYPE::Acc_y) )
+							if( true == strInput.empty() ) strInput.push_back(ch);
+
+					}
+					else if ('.' == ch) 
+					{
+						if( selection == CASE_CAST(SUBMENU_TYPE::Inveh_speed) || 
+								selection == CASE_CAST(SUBMENU_TYPE::Axle_rel_speed) ||
+								selection == CASE_CAST(SUBMENU_TYPE::Yawrate) || 
+								selection == CASE_CAST(SUBMENU_TYPE::Acc_x) || 
+								selection == CASE_CAST(SUBMENU_TYPE::Acc_y) ||
+								selection == CASE_CAST(SUBMENU_TYPE::limit_tq))
+							if( false == strInput.empty() && strInput.find('.') == std::string::npos) strInput.push_back(ch);
+					}
+					else if(ch == 127 || ch == KEY_BACKSPACE)
+					{
+						if( false == strInput.empty()) strInput.pop_back();
+					}
+					else if(ch == KEY_ENTER || ch == '\n')
+					{
+						if(false == strInput.empty())
+						{
+
+							if( selection == CASE_CAST(SUBMENU_TYPE::Inveh_speed)) 
+							{
+								try
+								{
+									double val = std::stod(strInput);
+									if( val < 0) val = 0.0f;
+									else if( val > 250.0) val = 250.0;
+									cmd_info.m_fCmd_in_vehicle_speed = val;
+								}
+								catch(const std::exception&)
+								{
+								}
+								
+							}
+							else if( selection == CASE_CAST(SUBMENU_TYPE::Axle_rel_speed) )
+							{
+								try
+								{
+									double val = std::stod(strInput);
+									if( val < -7) val = -7.0f;
+									else if( val > 7) val = 7.0f;
+									cmd_info.m_fCmd_relatve_veh_axle_speed = val;
+								}
+								catch(const std::exception&)
+								{
+								}
+							}
+							else if( selection == CASE_CAST(SUBMENU_TYPE::Yawrate) )
+							{
+								try
+								{
+									double val = std::stod(strInput);
+									if( val < -7) val = -3.9f;
+									else if( val > 7) val = 3.9f;
+									cmd_info.m_fCmd_yawrate = val;
+								}
+								catch(const std::exception&)
+								{
+								}				
+							}
+							else if( selection == CASE_CAST(SUBMENU_TYPE::Acc_x) )
+							{
+								try
+								{
+									double val = std::stod(strInput);
+									if( val < -15) val = -15.0f;
+									else if( val > 15) val = 15.0f;
+									cmd_info.m_fCmd_accelX = val;
+								}
+								catch(const std::exception&)
+								{
+								}				
+							}
+							else if( selection == CASE_CAST(SUBMENU_TYPE::Acc_y) )
+							{
+								try
+								{
+									double val = std::stod(strInput);
+									if( val < -15) val = -15.0f;
+									else if( val > 15) val = 15.0f;
+									cmd_info.m_fCmd_accelY = val;
+								}
+								catch(const std::exception&)
+								{
+								}				
+							}
+							else if( selection == CASE_CAST(SUBMENU_TYPE::ret_weight) )
+							{
+								try
+								{
+									int val = std::stoi(strInput);
+									if( val < 0) val = 0;
+									else if( val > 100) val = 100;
+									cmd_info.m_nCmd_str_active_ret_weight_req = val;
+								}
+								catch(const std::exception&)
+								{
+								}				
+							}
+							else if( selection == CASE_CAST(SUBMENU_TYPE::angle_weight) )
+							{
+								try
+								{
+									int val = std::stoi(strInput);
+									if( val < 0) val = 0;
+									else if( val > 100) val = 100;
+									cmd_info.m_nCmd_str_angle_ctrl_weight_req = val;
+								}
+								catch(const std::exception&)
+								{
+								}				
+							}
+							else if( selection == CASE_CAST(SUBMENU_TYPE::limit_tq) )
+							{
+								try
+								{
+									double val = std::stod(strInput);
+									if( val < 0) val = 0.0;
+									else if( val > 10.0f) val = 10.0f;
+									cmd_info.m_fCmd_str_angle_ctrl_tq_limit_req = val;
+								}
+								catch(const std::exception&)
+								{
+								}				
+							}
+
+
+							strInput.clear();
+							refresh();
+							break;
+						}
+					}
+				}
+				break;
 		}
-		// else if(ch == '1')
-		// {
-		// 	mvprint
-		// }
 	}
 	usleep(200000);
+
 }
 
 void setMenu_ctrl_steer_angle(CAN_CMD_INFO& cmd_info)
@@ -455,7 +647,7 @@ void setMenu_ctrl_free_torque(CAN_CMD_INFO& cmd_info)
 				
 				if(ch == '-')
 				{
-					if( true == strbuff.empty()) strbuff.push_back(ch);
+					if( true == strbuff.empty() ) strbuff.push_back(ch);
 				}
 				else if( ch >= '0' && ch <= '9')
 				{
@@ -556,7 +748,7 @@ void setMenu_ctrl_motor_torque(CAN_CMD_INFO& cmd_info)
 			case CASE_CAST(EPS_Mode::Mode_Tq_ctrl):
 				if(ch == '-')
 				{
-					if( true == strbuff.empty()) strbuff.push_back(ch);
+					if( true == strbuff.empty() ) strbuff.push_back(ch);
 				}
 				else if( ch >= '0' && ch <= '9')
 				{
