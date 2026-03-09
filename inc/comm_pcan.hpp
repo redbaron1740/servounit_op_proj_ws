@@ -372,7 +372,7 @@ private: //functions
 
 		if (Status == PCAN_ERROR_QXMTFULL || Status == PCAN_ERROR_XMTFULL) 	
 		{ 
-			std::this_thread::sleep_for(std::chrono::microseconds(200));
+			std::this_thread::sleep_for(std::chrono::microseconds(500));
 			CAN_Write(pcan_device_, &tx_msg);
 		}
 	}
