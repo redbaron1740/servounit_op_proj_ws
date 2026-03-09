@@ -34,14 +34,6 @@
 #include "comm_pcan.hpp"
 #include "menu_display.hpp"
 
-void updateEPSData(CAN_RX_INFO& data_info,VEH_INFO_DISP& vid);
-void showAbout() ;
-void setMenu_ctrl_steer_angle(CAN_CMD_INFO& cmd_info);
-void setMenu_ctrl_free_torque(CAN_CMD_INFO& cmd_info);
-void setMenu_ctrl_motor_torque(CAN_CMD_INFO& cmd_info);
-void setMenu_ctrl_vibration(CAN_CMD_INFO& cmd_info);
-void update_another_data(CAN_CMD_INFO& cmd_info);
-
 enum class MENU_TYPE : uint8_t {CanDeviceOperate = 0, SteerCtrlMenu, FeedbackFreeTqCtrl, MotorTqCtrl, Vibrated_on, Input_anotherMenu, About, Quit};
 enum class SUBMENU_TYPE : uint8_t {Inveh_speed = 0, Axle_rel_speed = 1, Yawrate, Acc_x, Acc_y, ret_weight,  angle_weight, limit_tq, Update};
 
@@ -104,6 +96,16 @@ typedef struct _tag_VehInfo
 	bool 	bIsVibrated;
 	int		nVibrateLevel;	
 }VEH_INFO_DISP;
+
+void updateEPSData(CAN_RX_INFO& data_info,VEH_INFO_DISP& vid);
+void showAbout() ;
+void setMenu_ctrl_steer_angle(CAN_CMD_INFO& cmd_info);
+void setMenu_ctrl_free_torque(CAN_CMD_INFO& cmd_info);
+void setMenu_ctrl_motor_torque(CAN_CMD_INFO& cmd_info);
+void setMenu_ctrl_vibration(CAN_CMD_INFO& cmd_info);
+void update_another_data(CAN_CMD_INFO& cmd_info);
+
+
 
 PCANManager pcan_manager(PCAN_USBBUS1, PCAN_BAUD);
 bool IsWorkingDevice = false;
