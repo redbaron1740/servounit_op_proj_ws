@@ -34,7 +34,7 @@
 #include "comm_pcan.hpp"
 #include "menu_display.hpp"
 
-void updateEPSData(CAN_RX_INFO& data_info,double fAngle,double fVehSpeed, bool bIsCtrlAngle, bool bIsVibMode);
+void updateEPSData(CAN_RX_INFO& data_info,VEH_INFO_DISP& vid);
 void showAbout() ;
 void setMenu_ctrl_steer_angle(CAN_CMD_INFO& cmd_info);
 void setMenu_ctrl_free_torque(CAN_CMD_INFO& cmd_info);
@@ -133,6 +133,7 @@ int main(void)//int argc, char* argv[])
 	cmd_info.m_nCmd_str_vibrate_level = 5; 				// 0 ~ 9(max)
 	cmd_info.m_fCmd_in_vehicle_speed = 0.0f;			//kph
 	cmd_info.m_fCmd_engine_speed = 320.0f;				//rpm
+	cmd_info.m_fCmd_relatve_veh_axle_speed = 0.00f;		//kph
 	
 	while (bRun)
 	{
@@ -196,10 +197,10 @@ int main(void)//int argc, char* argv[])
 				pcan_manager.setCmdData_eps(cmd_info);
 				break;
 
-			case CASE_CAST(MENU_TYPE::Vibrated_on): setMenu_ctrl_vibration(cmd_info);	break; 			// 조향 진동 모드 설정
-			case CASE_CAST(MENU_TYPE::FeedbackFreeTqCtrl): setMenu_ctrl_free_torque(cmd_info);break; 	// Feedback-free torque control 설정
-			case CASE_CAST(MENU_TYPE::MotorTqCtrl): setMenu_ctrl_motor_torque(cmd_info); break; 		// Motor torque control 설정
-			case CASE_CAST(MENU_TYPE::SteerCtrlMenu): setMenu_ctrl_steer_angle(cmd_info); break;   	// streeing Value 설정
+			case CASE_CAST(MENU_TYPE::Vibrated_on): 		setMenu_ctrl_vibration(cmd_info);	break; 			// 조향 진동 모드 설정
+			case CASE_CAST(MENU_TYPE::FeedbackFreeTqCtrl): 	setMenu_ctrl_free_torque(cmd_info);break; 	// Feedback-free torque control 설정
+			case CASE_CAST(MENU_TYPE::MotorTqCtrl): 		setMenu_ctrl_motor_torque(cmd_info); break; 		// Motor torque control 설정
+			case CASE_CAST(MENU_TYPE::SteerCtrlMenu): 		setMenu_ctrl_steer_angle(cmd_info); break;   	// streeing Value 설정
 			default: showAbout();	break;
 		}
 	}

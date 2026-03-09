@@ -25,9 +25,9 @@ inline DWORD Make_macro_pgn_id(DWORD eID)
 		return static_cast<DWORD>(eID & 0xFFFF00);
 }
 
+#define ETRI_Protocol 1
 
-
-#if 0
+#if ETRI_Protocol
 constexpr DWORD EBC2 		= 0x18FEBF0B; 		//EBC2  period: 20m
 constexpr DWORD HRW 		= 0x8FE6E0B; 		//HRW     20ms
 constexpr DWORD VDC2 		= 0x18F0090B; 		//VDC2    10ms
@@ -48,10 +48,9 @@ constexpr DWORD EPSI3 		= 0x18FF02FE; 		//EPS4    10ms
 constexpr DWORD VDHR 		= 0x18FEC1FE; 		//VDHR    1000
 
 
-constexpr DWORD EPSO1 		= 0x18FF0513; 		//EPSO1
-constexpr DWORD EPSO2 		= 0x18FF0613; 		//EPSO2
-constexpr DWORD ESC1 		= 0x18F00B13; 		//ESC1
-
+constexpr DWORD EPSO1 		= 0x18FF0513; 				//EPSO1
+constexpr DWORD EPSO2 		= 0x18FF0613; 				//EPSO2
+constexpr DWORD ESC1 		= 0x18F00B13; 				//ESC1
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /// <summary>	Main entry-point for this application. </summary>
@@ -268,35 +267,32 @@ private: //methods
 			}
 			//m_tx_msg_18F01DEFh.DATA[7] = nCnt & 0x0f;
 
-			if ( 1) //elapsed % 2 == 1 )  //20ms
-			{
-				dummy_data_u16 = static_cast<uint16_t>((dummy.m_fCmd_in_vehicle_speed) * 256.0f); // 예시로 차량 속도를 0.1kph 단위로 변환하여 전송
-				m_tx_msg_18FEBFFEh.DATA[0] = static_cast<uint8_t>(dummy_data_u16 & 0xFF); // 하위 8비트
-				m_tx_msg_18FEBFFEh.DATA[1] = static_cast<uint8_t>((dummy_data_u16 >> 8) & 0xFF); // 상위 8비
-				
-				dummy_data_u8 = static_cast<uint8_t>((dummy.m_fCmd_relatve_veh_axle_speed + 7.8125f)*16);// 예시로 실속과 휠 axle 상대 속도를 kph 단위를 8비트로 변환하여 전송
-				m_tx_msg_18FEBFFEh.DATA[2] = m_tx_msg_18FEBFFEh.DATA[3] = m_tx_msg_18FEBFFEh.DATA[4] = dummy_data_u8; 
-				m_tx_msg_18FEBFFEh.DATA[5] = m_tx_msg_18FEBFFEh.DATA[6] = m_tx_msg_18FEBFFEh.DATA[7] = dummy_data_u8;
-				can_tx_message_handler(m_tx_msg_18FEBFFEh);  //EBC2
+			dummy_data_u16 = static_cast<uint16_t>((dummy.m_fCmd_in_vehicle_speed) * 256.0f); // 예시로 차량 속도를 0.1kph 단위로 변환하여 전송
+			m_tx_msg_18FEBFFEh.DATA[0] = static_cast<uint8_t>(dummy_data_u16 & 0xFF); // 하위 8비트
+			m_tx_msg_18FEBFFEh.DATA[1] = static_cast<uint8_t>((dummy_data_u16 >> 8) & 0xFF); // 상위 8비
+			
+			dummy_data_u8 = static_cast<uint8_t>((dummy.m_fCmd_relatve_veh_axle_speed + 7.8125f)*16);// 예시로 실속과 휠 axle 상대 속도를 kph 단위를 8비트로 변환하여 전송
+			m_tx_msg_18FEBFFEh.DATA[2] = m_tx_msg_18FEBFFEh.DATA[3] = m_tx_msg_18FEBFFEh.DATA[4] = dummy_data_u8; 
+			m_tx_msg_18FEBFFEh.DATA[5] = m_tx_msg_18FEBFFEh.DATA[6] = m_tx_msg_18FEBFFEh.DATA[7] = dummy_data_u8;
+			can_tx_message_handler(m_tx_msg_18FEBFFEh);  //EBC2
 
-				m_tx_msg_CFE6CFEh.DATA[6] = static_cast<uint8_t>(dummy_data_u16 & 0xFF); // 하위 8비트
-				m_tx_msg_CFE6CFEh.DATA[7] = static_cast<uint8_t>((dummy_data_u16 >> 8) & 0xFF); // 상위 8비
-				can_tx_message_handler(m_tx_msg_CFE6CFEh);   //TCO1
+			m_tx_msg_CFE6CFEh.DATA[6] = static_cast<uint8_t>(dummy_data_u16 & 0xFF); // 하위 8비트
+			m_tx_msg_CFE6CFEh.DATA[7] = static_cast<uint8_t>((dummy_data_u16 >> 8) & 0xFF); // 상위 8비
+			can_tx_message_handler(m_tx_msg_CFE6CFEh);   //TCO1
 
-				m_tx_msg_8FE6EFEh.DATA[0] = static_cast<uint8_t>(dummy_data_u16 & 0xff); // 예시로 차량 속도 kph 단위를 16비트로 변환하여 전송
-				m_tx_msg_8FE6EFEh.DATA[1] = static_cast<uint8_t>((dummy_data_u16 >> 8) & 0xFF); // 상위 8비
-				m_tx_msg_8FE6EFEh.DATA[2] = static_cast<uint8_t>(dummy_data_u16 & 0xff); // 예시로 차량 속도 kph 단위를 16비트로 변환하여 전송
-				m_tx_msg_8FE6EFEh.DATA[3] = static_cast<uint8_t>((dummy_data_u16 >> 8) & 0xFF); // 상위 8비
-				m_tx_msg_8FE6EFEh.DATA[4] = static_cast<uint8_t>(dummy_data_u16 & 0xff); // 예시로 차량 속도 kph 단위를 16비트로 변환하여 전송
-				m_tx_msg_8FE6EFEh.DATA[5] = static_cast<uint8_t>((dummy_data_u16 >> 8) & 0xFF); // 상위 8비
-				m_tx_msg_8FE6EFEh.DATA[6] = static_cast<uint8_t>(dummy_data_u16 & 0xff); // 예시로 차량 속도 kph 단위를 16비트로 변환하여 전송
-				m_tx_msg_8FE6EFEh.DATA[7] = static_cast<uint8_t>((dummy_data_u16 >> 8) & 0xFF); // 상위 8비
-				can_tx_message_handler(m_tx_msg_8FE6EFEh);   // HRW
+			m_tx_msg_8FE6EFEh.DATA[0] = static_cast<uint8_t>(dummy_data_u16 & 0xff); // 예시로 차량 속도 kph 단위를 16비트로 변환하여 전송
+			m_tx_msg_8FE6EFEh.DATA[1] = static_cast<uint8_t>((dummy_data_u16 >> 8) & 0xFF); // 상위 8비
+			m_tx_msg_8FE6EFEh.DATA[2] = static_cast<uint8_t>(dummy_data_u16 & 0xff); // 예시로 차량 속도 kph 단위를 16비트로 변환하여 전송
+			m_tx_msg_8FE6EFEh.DATA[3] = static_cast<uint8_t>((dummy_data_u16 >> 8) & 0xFF); // 상위 8비
+			m_tx_msg_8FE6EFEh.DATA[4] = static_cast<uint8_t>(dummy_data_u16 & 0xff); // 예시로 차량 속도 kph 단위를 16비트로 변환하여 전송
+			m_tx_msg_8FE6EFEh.DATA[5] = static_cast<uint8_t>((dummy_data_u16 >> 8) & 0xFF); // 상위 8비
+			m_tx_msg_8FE6EFEh.DATA[6] = static_cast<uint8_t>(dummy_data_u16 & 0xff); // 예시로 차량 속도 kph 단위를 16비트로 변환하여 전송
+			m_tx_msg_8FE6EFEh.DATA[7] = static_cast<uint8_t>((dummy_data_u16 >> 8) & 0xFF); // 상위 8비
+			can_tx_message_handler(m_tx_msg_8FE6EFEh);   // HRW
 
-				m_tx_msg_18FEF100h.DATA[1] = static_cast<uint8_t>(dummy_data_u16 & 0xff); // 예시로 차량 속도 kph 단위를 16비트로 변환하여 전송
-				m_tx_msg_18FEF100h.DATA[2] = static_cast<uint8_t>((dummy_data_u16 >> 8) & 0xFF); // 상위 8비
-				can_tx_message_handler(m_tx_msg_18FEF100h);  //CCVS1
-			}
+			m_tx_msg_18FEF100h.DATA[1] = static_cast<uint8_t>(dummy_data_u16 & 0xff); // 예시로 차량 속도 kph 단위를 16비트로 변환하여 전송
+			m_tx_msg_18FEF100h.DATA[2] = static_cast<uint8_t>((dummy_data_u16 >> 8) & 0xFF); // 상위 8비
+			can_tx_message_handler(m_tx_msg_18FEF100h);  //CCVS1
 
 			if ( elapsed % 100 == 50 )  //1000ms
 			{
