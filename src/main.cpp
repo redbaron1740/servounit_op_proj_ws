@@ -29,11 +29,12 @@
 #include <algorithm>
 #include <ctime>
 #include <stdexcept>
+#include <random>
 
 #include "comm_pcan.hpp"
 #include "menu_display.hpp"
 
-void updateEPSData(CAN_RX_INFO& data_info,double fAngle,uint8_t temp, bool bIsCtrlAngle, bool bIsVibMode);
+void updateEPSData(CAN_RX_INFO& data_info,double fAngle,double fVehSpeed, bool bIsCtrlAngle, bool bIsVibMode);
 void showAbout() ;
 void setMenu_ctrl_steer_angle(CAN_CMD_INFO& cmd_info);
 void setMenu_ctrl_free_torque(CAN_CMD_INFO& cmd_info);
@@ -42,6 +43,7 @@ void setMenu_ctrl_vibration(CAN_CMD_INFO& cmd_info);
 void update_another_data(CAN_CMD_INFO& cmd_info);
 
 enum class MENU_TYPE : uint8_t {CanDeviceOperate = 0, SteerCtrlMenu, FeedbackFreeTqCtrl, MotorTqCtrl, Vibrated_on, Input_anotherMenu, About, Quit};
+enum class SUBMENU_TYPE : uint8_t {Inveh_speed = 0, Axle_rel_speed = 1, Yawrate, Acc_x, Acc_y, ret_weight,  angle_weight, limit_tq, Update};
 
 template<typename E>
 constexpr auto CASE_CAST(E e) -> typename std::underlying_type<E>::type 
@@ -58,8 +60,8 @@ constexpr auto VALUE_CAST(E e) -> typename std::underlying_type<E>::type
 std::vector<std::string> menu_items = {
 	"1. Open can device ", 
 	"2. Set angle value for steering control", 
-	"3. Set Feedback-free torque value for steering control", 
-	"4. Set Motor torque value for steering control", 
+	"3. Set Feedback-free torque value for steering control(-850~850)", 
+	"4. Set Motor torque value for steering control(-20~20)", 
 	"5. Steer Vibration mode on", 
 	"6. Set another Value (vehicle values, etc.)", 
 	"7. About Program",
@@ -94,9 +96,17 @@ std::vector<std::string> steer_vibration_mode_items = {
 	"Invalid"
 };
 
+typedef struct _tag_VehInfo
+{
+	double 	fAngle;
+	double 	fVehSpeed;
+	bool 	bIsCtrlAngle;
+	bool 	bIsVibrated;
+	int		nVibrateLevel;	
+}VEH_INFO_DISP;
+
 PCANManager pcan_manager(PCAN_USBBUS1, PCAN_BAUD);
 bool IsWorkingDevice = false;
-double fAngle;
 
 int main(void)//int argc, char* argv[]) 
 {
@@ -154,21 +164,29 @@ int main(void)//int argc, char* argv[])
 			    clear();
 				mvprintw( 2, 10, "Opening CAN device...");
 
-				if(0 > pcan_manager.device_open_())
+				if( false == IsWorkingDevice )
 				{
-					mvprintw( 4, 10, "Failed to open CAN device.");
-					IsWorkingDevice = false;
+					if(0 > pcan_manager.device_open_() )
+					{
+						mvprintw( 4, 10, "Failed to open CAN device.");
+						IsWorkingDevice = false;
+					}
+					else  //can device opened successfully
+					{
+						IsWorkingDevice = true;
+						mvprintw( 4, 10, "CAN device opened successfully.");
+						pcan_manager.device_start_();
+						mvprintw( 5, 10, "CAN device started successfully.");
+
+						pcan_manager.setCmdData_eps(cmd_info);
+
+					}
 				}
-				else  //can device opened successfully
+				else
 				{
-					IsWorkingDevice = true;
-					mvprintw( 4, 10, "CAN device opened successfully.");
-					pcan_manager.device_start_();
-					mvprintw( 5, 10, "CAN device started successfully.");
-
-					pcan_manager.setCmdData_eps(cmd_info);
-
+					mvprintw( 5, 10, "CAN device's already opened .");
 				}
+
 				refresh();
 				usleep(2000000);
 
@@ -198,7 +216,7 @@ int main(void)//int argc, char* argv[])
 	return 0;
 }
 
-void updateEPSData(CAN_RX_INFO& data_info, double fAngle,uint8_t temp, bool bIsCtrlAngle, bool bIsVibrated)
+void updateEPSData(CAN_RX_INFO& data_info, VEH_INFO_DISP& vid)
 {
 	// EPS 데이터 업데이트 로직 구현
 	// 예: CAN 메시지 수신 및 데이터 처리
@@ -237,16 +255,17 @@ void updateEPSData(CAN_RX_INFO& data_info, double fAngle,uint8_t temp, bool bIsC
 	lines++;
 	mvprintw(lines++, 3, "#################################################");
 	lines++;
-	mvprintw(lines++, 3, bIsCtrlAngle ? "Input desired steer angle (-850.0 ~ 850.0): %.1lf":"Input desired torque (-2.0 ~ 2.0): %.1lf", fAngle);
-	mvprintw(lines++, 3, bIsVibrated ? "Press 'Arrow Up/Down' to in/decrease vibrated level: %d":"Press 'Arrow Up/Down' to in/decrease Vehicle speed: %dkph", temp);
+	mvprintw(lines++, 3, vid.bIsCtrlAngle ? "Input desired steer angle (-850.0 ~ 850.0): %.1lf":"Input desired torque (-2.0 ~ 2.0): %.1lf", vid.fAngle);
+	if(true == vid.bIsVibrated)
+		mvprintw(lines++, 3,  "Press 'Arrow Up/Down' to in/decrease vibrated level: %d", vid.nVibrateLevel);
+	else
+		mvprintw(lines++, 3,  "Press 'Arrow Up/Down' to in/decrease Vehicle speed: %.2fkph", vid.fVehSpeed);
 	mvprintw(lines++, 3, "Press 'q' to return to main menu");
 	lines++;
 	mvprintw(lines++, 3, "Current Time: %s", time_str);
 
 	refresh();
 }
-
-enum class SUBMENU_TYPE : uint8_t {Inveh_speed = 0, Axle_rel_speed = 1, Yawrate, Acc_x, Acc_y, ret_weight,  angle_weight, limit_tq, Update};
 
 int submenu_display(const CAN_CMD_INFO& cmd_info)
 {
@@ -492,8 +511,7 @@ void setMenu_ctrl_steer_angle(CAN_CMD_INFO& cmd_info)
 		usleep(2000000);
 
 		return;
-	}
-	
+	}	
 
 	// 조향 제어 각도 설정 메뉴 로직 구현
 	// 예: 사용자 입력을 받아 조향 각도 설정
@@ -501,14 +519,24 @@ void setMenu_ctrl_steer_angle(CAN_CMD_INFO& cmd_info)
 	bool bSubMenuRun = true;
 	std::string strbuff;
 	int ch;
-	int nVehSpeed = 0;
+	VEH_INFO_DISP vid{};
 
-	fAngle = 0.0f;
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_real_distribution<> range(0.0, 1.0); //range: 0.00 ~ 0.99
+	
+	vid.bIsCtrlAngle = true;
+	vid.bIsVibrated = false;
+	vid.fVehSpeed = 0.0f;
+	vid.fAngle = 0.0f;
+
+	int nInteger = 0;
 
 	while(bSubMenuRun)
 	{
 		CAN_RX_INFO data_info = pcan_manager.getRxData_eps();
-		updateEPSData(data_info,fAngle, nVehSpeed,true, false);
+		
+		updateEPSData(data_info,vid);
 
 		ch = getch();
 
@@ -518,17 +546,13 @@ void setMenu_ctrl_steer_angle(CAN_CMD_INFO& cmd_info)
 			cmd_info.m_FCmd_str_angle = 0.0f;
 			cmd_info.m_nCmd_str_ctrl_mode = CASE_CAST(EPS_Mode::Off);
 		}			
-		else if( ch == KEY_UP)
-		{
-			nVehSpeed += 1;
-			cmd_info.m_fCmd_in_vehicle_speed = static_cast<double>(nVehSpeed);
-		}
+		else if( ch == KEY_UP)	nInteger += 1;
 		else if (ch == KEY_DOWN)
 		{
-			nVehSpeed -= 1;
-			if(nVehSpeed < 0) nVehSpeed = 0;     //kph
-			cmd_info.m_fCmd_in_vehicle_speed = static_cast<double>(nVehSpeed);
+			nInteger -= 1;
+			if(nInteger < 0) nInteger = 0;     //kph
 		}	
+		cmd_info.m_fCmd_in_vehicle_speed = vid.fVehSpeed = static_cast<double>(nInteger) + range(gen);
 
 		switch(data_info.m_nData_str_ctrl_mode)
 		{
@@ -565,8 +589,8 @@ void setMenu_ctrl_steer_angle(CAN_CMD_INFO& cmd_info)
 							double val = std::stod(strbuff);
 							if( val < -850.0) val = -850.0;
 							else if( val > 850.0) val = 850.0;
-							fAngle = val;
-							cmd_info.m_FCmd_str_angle = fAngle;
+							vid.fAngle = val;
+							cmd_info.m_FCmd_str_angle = vid.fAngle;
 						} catch (const std::exception&) {
 							// 잘못된 입력 무시
 						}
@@ -605,14 +629,23 @@ void setMenu_ctrl_free_torque(CAN_CMD_INFO& cmd_info)
 	bool bSubMenuRun = true;
 	std::string strbuff;
 	int ch;
-	int nVehSpeed = 0;
+	VEH_INFO_DISP vid{};
+	vid.bIsCtrlAngle = false;
+	vid.bIsVibrated = false;
 
-	fAngle = 0.0f;
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_real_distribution<> range(0.0, 1.0); //range: 0.00 ~ 0.99
+
+	vid.fAngle = 0.0f;
+	vid.fVehSpeed = 0.0f;
+
+	int nInteger = 0;
 
 	while(bSubMenuRun)
 	{
 		CAN_RX_INFO data_info = pcan_manager.getRxData_eps();
-		updateEPSData(data_info,fAngle, nVehSpeed, false, false);
+		updateEPSData(data_info,vid);
 
 		ch = getch();
 
@@ -622,18 +655,13 @@ void setMenu_ctrl_free_torque(CAN_CMD_INFO& cmd_info)
 			cmd_info.m_FCmd_str_angle = 0.0f;
 			cmd_info.m_nCmd_str_ctrl_mode = CASE_CAST(EPS_Mode::Off);
 		}
-		else if( ch == KEY_UP)
-		{
-			nVehSpeed += 1;
-			cmd_info.m_fCmd_in_vehicle_speed = static_cast<double>(nVehSpeed);
-		}
+		else if( ch == KEY_UP)	nInteger += 1;
 		else if (ch == KEY_DOWN)
 		{
-			nVehSpeed -= 1;
-			if(nVehSpeed < 0) nVehSpeed = 0;     //kph
-			cmd_info.m_fCmd_in_vehicle_speed = static_cast<double>(nVehSpeed);
+			nInteger -= 1;
+			if(nInteger < 0) nInteger = 0;     //kph
 		}	
-
+		cmd_info.m_fCmd_in_vehicle_speed = vid.fVehSpeed = static_cast<double>(nInteger) + range(gen);
 
 		switch(data_info.m_nData_str_ctrl_mode)
 		{
@@ -670,8 +698,8 @@ void setMenu_ctrl_free_torque(CAN_CMD_INFO& cmd_info)
 							double val = std::stod(strbuff);
 							if( val < -2.0) val = -2.0;
 							else if( val > 2.0) val = 2.0;
-							fAngle = val;
-							cmd_info.m_fCmd_str_fbf_tq = fAngle;
+							vid.fAngle = val;
+							cmd_info.m_fCmd_str_fbf_tq = vid.fAngle;
 						} catch (const std::exception&) {
 							// 잘못된 입력 무시
 						}
@@ -709,13 +737,22 @@ void setMenu_ctrl_motor_torque(CAN_CMD_INFO& cmd_info)
 	bool bSubMenuRun = true;
 	std::string strbuff;
 	int ch;
-	int nVehSpeed = 0;
-	fAngle = 0.0f;
+	VEH_INFO_DISP vid{};
+
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_real_distribution<> range(0.0, 1.0); //range: 0.00 ~ 0.99
+
+	vid.bIsCtrlAngle  = vid.bIsVibrated = false;
+	vid.fAngle = 0.0f;
+	vid.fVehSpeed = 0.0f;
+
+	int nInteger = 0;
 
 	while(bSubMenuRun)
 	{
 		CAN_RX_INFO data_info = pcan_manager.getRxData_eps();
-		updateEPSData(data_info,fAngle, nVehSpeed, false, false);
+		updateEPSData(data_info,vid);
 
 		ch = getch();
 
@@ -725,17 +762,13 @@ void setMenu_ctrl_motor_torque(CAN_CMD_INFO& cmd_info)
 			cmd_info.m_FCmd_str_angle = 0.0f;
 			cmd_info.m_nCmd_str_ctrl_mode = CASE_CAST(EPS_Mode::Off);
 		}
-		else if( ch == KEY_UP)
-		{
-			nVehSpeed += 1;
-			cmd_info.m_fCmd_in_vehicle_speed = static_cast<double>(nVehSpeed);
-		}
+		else if( ch == KEY_UP)	nInteger += 1;
 		else if (ch == KEY_DOWN)
 		{
-			nVehSpeed -= 1;
-			if(nVehSpeed < 0) nVehSpeed = 0;     //kph
-			cmd_info.m_fCmd_in_vehicle_speed = static_cast<double>(nVehSpeed);
+			nInteger -= 1;
+			if(nInteger < 0) nInteger = 0;     //kph
 		}	
+		cmd_info.m_fCmd_in_vehicle_speed = vid.fVehSpeed = static_cast<double>(nInteger) + range(gen);
 
 		switch(data_info.m_nData_str_ctrl_mode)
 		{
@@ -771,8 +804,8 @@ void setMenu_ctrl_motor_torque(CAN_CMD_INFO& cmd_info)
 							double val = std::stod(strbuff);
 							if( val < -2.0) val = -2.0;
 							else if( val > 2.0) val = 2.0;
-							fAngle = val;
-							cmd_info.m_fCmd_str_mt_tq = fAngle;
+							vid.fAngle = val;
+							cmd_info.m_fCmd_str_mt_tq = vid.fAngle;
 						} catch (const std::exception&) {
 							// 잘못된 입력 무시
 						}
@@ -811,36 +844,40 @@ void setMenu_ctrl_vibration(CAN_CMD_INFO& cmd_info)
 	bool bSubMenuRun = true;
 	std::string strbuff;
 	int ch;
-	int vib_level = 5;
+	VEH_INFO_DISP vid{};
+
+	vid.nVibrateLevel = 5;
+	vid.bIsVibrated = true;
+	vid.bIsCtrlAngle = false;
 
 	cmd_info.m_nCmd_str_vibrate_enable = VALUE_CAST(VIBRATE_MODE::vibrate_enable);
 
 	while(bSubMenuRun)
 	{
 		CAN_RX_INFO data_info = pcan_manager.getRxData_eps();
-		updateEPSData(data_info,fAngle, vib_level , false, true);
+		updateEPSData(data_info,vid);
 
 		ch = getch();
 		
 		if(ch == 'q' || ch == 'Q')
 		{
 			bSubMenuRun = false;
-			cmd_info.m_nCmd_str_vibrate_level = vib_level = 5;
+			cmd_info.m_nCmd_str_vibrate_level = vid.nVibrateLevel = 5;
 			cmd_info.m_nCmd_str_vibrate_enable = VALUE_CAST(VIBRATE_MODE::vibrate_disable);
 			cmd_info.m_nCmd_str_ctrl_mode = CASE_CAST(EPS_Mode::Off);
 		}
 		else if(ch == KEY_UP )
 		{
-			 vib_level = (vib_level + 1) % 10 ;
-			cmd_info.m_nCmd_str_vibrate_level = vib_level;
+			 vid.nVibrateLevel = (vid.nVibrateLevel + 1) % 10 ;
+			cmd_info.m_nCmd_str_vibrate_level = vid.nVibrateLevel;
 		}
 		else if(ch == KEY_DOWN)
 		{
-			if ( vib_level > 0) vib_level--;
+			if ( vid.nVibrateLevel > 0) vid.nVibrateLevel--;
 			else
-				vib_level = 9;
+				vid.nVibrateLevel = 9;
 
-			cmd_info.m_nCmd_str_vibrate_level = vib_level;
+			cmd_info.m_nCmd_str_vibrate_level = vid.nVibrateLevel;
 
 		}
 

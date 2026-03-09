@@ -19,18 +19,34 @@ constexpr uint16_t PCAN_DEVICE  =  PCAN_USBBUS1;
 constexpr uint16_t PCAN_BAUD    =  PCAN_BAUD_500K;	
 constexpr uint32_t MAX_QUEUE_SIZE   = 10;
 
+inline DWORD Make_macro_pgn_id(DWORD eID)
+{
+	if(eID != 0 ) 
+		return static_cast<DWORD>(eID & 0xFFFF00);
+}
+
+
+
+#if 0
+constexpr DWORD EBC2 		= 0x18FEBF0B; 		//EBC2  period: 20m
+constexpr DWORD HRW 		= 0x8FE6E0B; 		//HRW     20ms
+constexpr DWORD VDC2 		= 0x18F0090B; 		//VDC2    10ms
+constexpr DWORD TD	 		= 0x18FEE6EE; 		//TD   1000
+constexpr DWORD EEC1 		= 0xCF00400; 		//EEC1    10ms
+#else
 constexpr DWORD EBC2 		= 0x18FEBFFE; 		//EBC2  period: 20m
-constexpr DWORD TCO1 		= 0xCFE6CFE; 		//TCO1    20ms
 constexpr DWORD HRW 		= 0x8FE6EFE; 		//HRW     20ms
-constexpr DWORD CCVS1 		= 0x18FEF100; 		//CCVS1	  20ms
-constexpr DWORD EEC1 		= 0xCF004FE; 		//EEC1    10ms
 constexpr DWORD VDC2 		= 0x18F009FE; 		//VDC2    10ms
-//constexpr DWORD nID_SAS1 		= 0x18F01DEF; 		//EPS1
+constexpr DWORD TD	 		= 0x18FEE6FE; 		//TD   1000
+constexpr DWORD EEC1 		= 0xCF004FE; 		//EEC1    10ms
+#endif
+constexpr DWORD TCO1 		= 0xCFE6CFE; 		//TCO1    20ms
+constexpr DWORD CCVS1 		= 0x18FEF100; 		//CCVS1	  20ms
 constexpr DWORD EPSI1 		= 0x18FF00FE; 		//EPS2   10ms
 constexpr DWORD EPSI2 		= 0x18FF01FE; 		//EPS3    10ms
 constexpr DWORD EPSI3 		= 0x18FF02FE; 		//EPS4    10ms
-constexpr DWORD TD	 		= 0x18FEE6FE; 		//EPS5   1000
-constexpr DWORD VDHR 		= 0x18FEC1FE; 		//EPS6    1000
+constexpr DWORD VDHR 		= 0x18FEC1FE; 		//VDHR    1000
+
 
 constexpr DWORD EPSO1 		= 0x18FF0513; 		//EPSO1
 constexpr DWORD EPSO2 		= 0x18FF0613; 		//EPSO2
@@ -307,9 +323,14 @@ private: //methods
 			can_tx_message_handler(m_tx_msg_CF004FEh);	  //EEC1
 			
 			dummy_data_u16 = static_cast<uint16_t>( (dummy.m_fCmd_yawrate + 3.92f) * 8192 );  //yawrate   
-			m_tx_msg_18F009FEh.DATA[0] = static_cast<uint8_t>(dummy_data_u16 & 0x00FF); // 하위 8비트
-			m_tx_msg_18F009FEh.DATA[1] = static_cast<uint8_t>((dummy_data_u16 >> 8) & 0x00FF); // 상위 8비트
-			can_tx_message_handler(m_tx_msg_18F009FEh);   //vdc1
+			m_tx_msg_18F009FEh.DATA[3] = static_cast<uint8_t>(dummy_data_u16 & 0x00FF); // 하위 8비트
+			m_tx_msg_18F009FEh.DATA[4] = static_cast<uint8_t>((dummy_data_u16 >> 8) & 0x00FF); // 상위 8비트
+			dummy_data_u16 = static_cast<uint16_t>( (dummy.m_fCmd_accelX + 15.687f) * 2048 );  //lateral   
+			m_tx_msg_18F009FEh.DATA[5] = static_cast<uint8_t>(dummy_data_u16 & 0x00FF); // 하위 8비트
+			m_tx_msg_18F009FEh.DATA[6] = static_cast<uint8_t>((dummy_data_u16 >> 8) & 0x00FF); // 상위 8비트
+			dummy_data_u8 = static_cast<uint8_t>( (dummy.m_fCmd_accelY + 12.5f) * 10 );  //longitudinal   
+			m_tx_msg_18F009FEh.DATA[7] = static_cast<uint8_t>(dummy_data_u8 & 0xFF); // 하위 8비트
+			can_tx_message_handler(m_tx_msg_18F009FEh);   //vdc2
 			//can_tx_message_handler(m_tx_msg_18F01DEFh);
 
 			dummy_data_u16 = static_cast<uint16_t>( (dummy.m_fCmd_str_mt_tq + 31.374f) * 1024);
@@ -362,7 +383,7 @@ private: //functions
 
 	void can_rx_message_handler(const TPCANMsg& rx_msg)
 	{
-		switch(rx_msg.ID)
+		switch((rx_msg.ID))
 		{
 			case EPSO1:  //EPS01
 				rx_dummy_.m_nData_str_sys_state = rx_msg.DATA[6] & 0x0F; // 하위 4비트
